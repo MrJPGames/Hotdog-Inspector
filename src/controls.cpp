@@ -42,16 +42,31 @@ void Controls::update(SDL_Event* p_event)
 	//Reset
 	leftClick = false;
 
-	//Update inputs
-	hidScanInput();
-	u32 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
-	u32 touches = hidTouchCount();
-	touchPosition tp;
 
 	Vector2i mouseCoords;
 
 	mouseCoords = {0, 0};
 
+	//Update inputs
+	hidScanInput();
+	u32 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
+	u32 touches = hidTouchCount();
+	//Read gyro (and other sensors...)
+	hidSixAxisSensorValuesRead(&sasv, CONTROLLER_P1_AUTO, 1);
+
+	if (kHeld & KEY_X){
+		useGyro = true;
+		gyroDelta = {0, 0};
+	}
+
+	if (useGyro){
+		gyroDelta.x -= sasv.gyroscope.z;
+		gyroDelta.y -= sasv.gyroscope.x;
+
+		//Transfor gyroDeltas into mouse coords
+		mouseCoords.x = 150*gyroDelta.x+640;
+		mouseCoords.y = 150*gyroDelta.y+360;
+	}
 	
 	//Only single touch support
 	if (touches >= 1){
@@ -59,6 +74,7 @@ void Controls::update(SDL_Event* p_event)
 		hidTouchRead(&tp, 0);
 		mouseCoords = {tp.px, tp.py};
 		leftClick = true;
+		useGyro = false; //Turn off gyro when using touch
 
 		mouseCoords.x = tp.px;
 		mouseCoords.y = tp.py;
